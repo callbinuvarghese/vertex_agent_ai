@@ -1,0 +1,56 @@
+Chat Response: candidates {
+  content {
+    role: "model"
+    parts {
+      function_call {
+        name: "get_stock_price"
+        args {
+          fields {
+            key: "ticker"
+            value {
+              string_value: "AAPL"
+            }
+          }
+        }
+      }
+    }
+  }
+  finish_reason: STOP
+  safety_ratings {
+    category: HARM_CATEGORY_HATE_SPEECH
+    probability: NEGLIGIBLE
+    probability_score: 0.078125
+    severity: HARM_SEVERITY_NEGLIGIBLE
+    severity_score: 0.102539062
+  }
+  safety_ratings {
+    category: HARM_CATEGORY_DANGEROUS_CONTENT
+    probability: NEGLIGIBLE
+    probability_score: 0.194335938
+    severity: HARM_SEVERITY_LOW
+    severity_score: 0.318359375
+  }
+  safety_ratings {
+    category: HARM_CATEGORY_HARASSMENT
+    probability: NEGLIGIBLE
+    probability_score: 0.178710938
+    severity: HARM_SEVERITY_NEGLIGIBLE
+    severity_score: 0.0864257812
+  }
+  safety_ratings {
+    category: HARM_CATEGORY_SEXUALLY_EXPLICIT
+    probability: NEGLIGIBLE
+    probability_score: 0.0634765625
+    severity: HARM_SEVERITY_NEGLIGIBLE
+    severity_score: 0.0927734375
+  }
+  avg_logprobs: -8.3621132944244891e-05
+}
+usage_metadata {
+  prompt_token_count: 26
+  candidates_token_count: 8
+  total_token_count: 34
+}
+model_version: "gemini-1.0-pro-002"
+
+Chat Response: The current stock price of Apple (AAPL) is $255.59
