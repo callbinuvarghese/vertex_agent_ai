@@ -3,7 +3,7 @@ import streamlit as st
 # Import libraries from the original code
 import requests
 import vertexai
-import loguru as logger
+from loguru import logger
 
 from vertexai.generative_models import (
     Content,
@@ -21,7 +21,7 @@ load_dotenv()
 
 def get_my_orders(args):    
     user_id = args.get("user_id")
-    logger.info("get_my_orders:User ID: {user_id}")
+    logger.debug(f"get_my_orders:User ID: {user_id}")
     # Simulated response
     return {
         "user_id": user_id,
@@ -52,7 +52,7 @@ def get_my_orders(args):
 # Define dummy functions for each operation
 def get_order_status(args):
     order_id = args.get("order_id")
-    logger.info("get_order_status:Order ID: {order_id}")
+    logger.debug(f"get_order_status:Order ID: {order_id}")
     # Simulated response
     if order_id == "1234":
         return {
@@ -72,7 +72,7 @@ def get_order_status(args):
 def initiate_return(args):
     order_id = args.get("order_id")
     reason = args.get("reason", "No reason provided")
-    logger.info("initiate_return:Order ID: {order_id}, Reason: {reason}")
+    logger.debug(f"initiate_return:Order ID: {order_id}, Reason: {reason}")
     
     if get_order_status(order_id)["shipping_status"] == "Shipped":   
         return {
@@ -90,7 +90,7 @@ def initiate_return(args):
 def cancel_order(args):
     order_id = args.get("order_id")
     # Simulated response
-    logger.info("initiate_return:Order ID: {order_id}")
+    logger.debug(f"initiate_return:Order ID: {order_id}")
     if get_order_status(order_id)["shipping_status"] == "Shipped":   
         return {
             "order_id": order_id,
@@ -104,7 +104,7 @@ def cancel_order(args):
 
 def get_tools():
 
-    
+    logger.debug("get_tools: Initializing tools")
     # Define the function declarations
     get_my_orders_func = FunctionDeclaration(
         name="get_my_orders",
@@ -168,24 +168,27 @@ def get_tools():
     )
     # Define the tools that include the above functions
     support_tool = Tool(
-        function_declarations=[get_order_status_func, initiate_return_func, cancel_order_func],
+        function_declarations=[get_my_orders_func, get_order_status_func, initiate_return_func, cancel_order_func],
     )
 
     function_handlers = {
-        "get_my_orders_func": get_my_orders,
+        "get_my_orders": get_my_orders,
         "get_order_status": get_order_status,
         "initiate_return": initiate_return,
         "cancel_order": cancel_order,
     }
+
+    #logger.debug(f"get_tools: Tools initialized; tools#: {len(support_tool.function_declarations)}")
+    logger.debug(f"get_tools: Tools initialized; tools: {support_tool}")
     return support_tool, function_handlers
 
 
 def get_model_response(model, api_response, user_prompt_content, function_call, resp_content):
      # Return the dummy API response to Gemini so it can generate a model response or request another function call
-    print(f"get_model_response; API Response: {api_response}")
-    print(f"get_model_response; User Prompt: {user_prompt_content}")
-    print(f"get_model_response; Function Call: {function_call.name}")
-    print(f"get_model_response; Response Content: {resp_content}")
+    logger.debug(f"get_model_response; API Response: {api_response}")
+    logger.debug(f"get_model_response; User Prompt: {user_prompt_content}")
+    logger.debug(f"get_model_response; Function Call: {function_call.name}")
+    logger.debug(f"get_model_response; Response Content: {resp_content}")
 
     response = model.generate_content(
         [
@@ -203,7 +206,7 @@ def get_model_response(model, api_response, user_prompt_content, function_call, 
         tools=[support_tool],
     )
     
-    print(f"get_model_response; response: {response}")
+    logger.debug(f"get_model_response; response: {response}")
     return response
 
 support_tool, function_handlers = get_tools()
@@ -222,7 +225,7 @@ def get_user_input():
     user_prompt = st.text_input("Ask me anything about your orders:")
     return user_prompt
 
-def process_user_input(user_prompt):
+def process_user_input(user_prompt, message_history):
     """
     Processes the user input and calls the relevant function
     """
@@ -231,17 +234,20 @@ def process_user_input(user_prompt):
         parts=[Part.from_text(user_prompt)],
     )
     
+    message_history.append(user_prompt_content)
+
     # Send the prompt and instruct the model to generate content
     response = model.generate_content(
-        user_prompt_content,
+        message_history,
         generation_config=GenerationConfig(temperature=0),
         tools=[support_tool],
     )
-    print(f"Response: {response}")
+    #print(f"Response: {response}")
     
     # Process function calls and generate response
     final_response = ""
     if (response.candidates[0].function_calls):
+        logger.debug(f"LLM Function Calls: {response.candidates[0].function_calls}")
         for function_call in response.candidates[0].function_calls:
 
             function_name = function_call.name
@@ -264,8 +270,11 @@ def process_user_input(user_prompt):
             else:
                 final_response += f"Unknown function {function_name}"
     else:
+        logger.debug(f"LLM NON-FUNC Response: {response.text}")
         final_response += response.text
-    return final_response
+    logger.debug(f"Final Response: {final_response}")
+
+    return final_response, message_history
 
 
 def main():
@@ -277,8 +286,16 @@ def main():
 
   
   if user_prompt:
-    response = process_user_input(user_prompt)
+
+    logger.debug(f"User Prompt: {user_prompt}")
+    if "message_history" not in st.session_state:
+        st.session_state.message_history = [Content(role="system", parts=[Part.from_text("You are a store support API assistant to help with online orders.")])]
+
+    response, st.session_state.message_history = process_user_input(user_prompt, st.session_state.message_history)
     st.write(response)
+
+    for msg in st.session_state.message_history:
+        st.write(f"Echo: {msg}")
 
 if __name__ == "__main__":
   main()
