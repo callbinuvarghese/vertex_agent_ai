@@ -1,2 +1,2 @@
-Gemini Function Calling
+### Gemini Function Calling
 Streamlit UI with Agentic AI
